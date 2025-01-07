@@ -1,4 +1,5 @@
 import 'package:course_query/gemini_helper.dart';
+import 'package:course_query/manual_form.dart';
 import 'package:course_query/request_chunk.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase/supabase.dart';
@@ -24,6 +25,21 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Course Query"),
+        actions: [
+          IconButton(
+              onPressed: () async {
+                final request = (await showDialog(
+                        context: context,
+                        useRootNavigator: false,
+                        builder: (context) => const ManualFormWidget()))
+                    as Map<String, dynamic>?;
+                if (request != null) {
+                  _submitRequest(
+                      request, "Request #${requestChunks.length + 1}");
+                }
+              },
+              icon: const Icon(Icons.edit_note))
+        ],
       ),
       body: Column(
         children: [
@@ -52,23 +68,56 @@ class _HomePageState extends State<HomePage> {
                 setState(() {
                   inputController.clear();
                 });
-                final data = await getQueryData(value);
-                final type = DataType.fromKey(data["projection_type"]);
-                final response =
-                    await supabase.rpc("query_section_data", params: data);
-                final list = List<Map<String, dynamic>>.from(response);
-                final chunk = RequestChunk(
-                    value, type, list.length < 20 ? list : list.sublist(0, 20));
-                setState(() {
-                  requestChunks.insert(0, chunk);
-                });
-                _requestChunkDialog(chunk);
+                showDialog(
+                    context: context,
+                    useRootNavigator: false,
+                    builder: (context) => const PopScope(
+                          canPop: false,
+                          child: AlertDialog(
+                            title: Text("Asking Gemini"),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(),
+                              ],
+                            ),
+                          ),
+                        ));
+                try {
+                  final data = await getQueryData(value);
+                  Navigator.of(context).pop();
+                  await _submitRequest(data, value);
+                } on Exception {
+                  Navigator.of(context).pop();
+                  showDialog(
+                      context: context,
+                      useRootNavigator: false,
+                      builder: (context) => const AlertDialog(
+                            title: Text("Gemini Not Available"),
+                            content: Center(
+                              child: Icon(Icons.not_interested),
+                            ),
+                          ));
+                  return;
+                }
               },
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _submitRequest(Map<String, dynamic> request, String name) async {
+    final type = DataType.fromKey(request["projection_type"]);
+    final response = await supabase.rpc("query_section_data", params: request);
+    final list = List<Map<String, dynamic>>.from(response);
+    final chunk = RequestChunk(
+        name, type, list.length <= 20 ? list : list.sublist(0, 20));
+    setState(() {
+      requestChunks.insert(0, chunk);
+    });
+    _requestChunkDialog(chunk);
   }
 
   Widget _requestChunkWidget(RequestChunk chunk) => ElevatedButton(
@@ -81,15 +130,18 @@ class _HomePageState extends State<HomePage> {
       useRootNavigator: false,
       builder: (context) => AlertDialog(
             title: Text("${chunk.dataType.name} Info"),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: chunk.response
-                    .expand((e) => [
-                          _mapChunkResponseEntry(e, chunk.dataType),
-                          if (e != chunk.response.last) const Divider()
-                        ])
-                    .toList(),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 400),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: chunk.response
+                      .expand((e) => [
+                            _mapChunkResponseEntry(e, chunk.dataType),
+                            if (e != chunk.response.last) const Divider()
+                          ])
+                      .toList(),
+                ),
               ),
             ),
           ));

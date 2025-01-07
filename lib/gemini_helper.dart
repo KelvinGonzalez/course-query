@@ -38,6 +38,10 @@ Future<String> fetchGeminiResponse(String text) async {
 
   final response = await http.post(url, headers: headers, body: payload);
   final data = jsonDecode(response.body);
+  if (response.statusCode != 200) {
+    throw Exception(
+        "Gemini service not available; code ${response.statusCode}");
+  }
   return data['candidates'][0]['content']['parts'][0]['text'];
 }
 
