@@ -1,0 +1,23 @@
+"Course" data includes: ("course_code": str, "course_info": str, "min_credits": int, "max_credits": int).
+"Section" data includes: ("section_code": str, "by_agreement": bool).
+"Meeting" data includes: ("start_time": int, "end_time": int, "days": str, "invert_days": bool, "room": str)
+"Professor" data includes: ("professor_name": str)
+"Projection" data includes: ("projection_type": str)
+
+"course_code" is a code that must *ALWAYS* follow the pattern "DEPT####" or "DEPT", whether lowercase or not (Convert to uppercase). "CIIC3015" is an example of a course code; "PSYCH420" is *NOT*. Department codes like "INSO" are also acceptable.
+Natural language course data that does not belong to any other defined fields belongs to "course_info". If natural language belongs to any other field then "course_info" = null.
+"by_agreement" includes all types of sections that do not have strict meeting data, such as online, research, and practice courses.
+"start_time" and "end_time" both are in 24 hour format, from 00:00 to 23:59. Be mindful of meridian for conversions.
+"days" uses the characters: {"L": Monday, "M": Tuesday, "W": Wednesday, "J": Thursday, "V": Friday} always in that order. An example may be "LWV" to represent Monday, Wednesday, and Friday.
+"invert_days" is used to specify when the selected "days" are *NOT* desired. If I say "Sections not given on Fridays" then "days" = "V" and "invert_days" = true. Default value for "invert_days" is false.
+"S 113" is an example of a "room". "S" is the classroom and also an acceptable value for "room". All rooms must follow the format r"\w+ \d+" where it starts with the building code followed by room number separated with a space. Add the space if the provided room does not have it.
+"room" can also take in the building code, which are: {"AE": Administración de Empresas, "B": Biologia, "CM": Coliseo Mangual, "SH": Sanchez Hidalgo, "CH": Chardon, "P": Piñero, "C": Celis, "M": Monzón, "S": Stefani, "EE": Enfermería, "T": Terrats, "AZ": Alzamora, "F": Física, "GE": Gimnasio Espada, "II": Ingeniería Industrial, "CI": Ingeniería Civil, "L": Luchetti (Mecánica), "IQ": Ingeniería Química, "Q": Química, "SA": ROTC}.
+"projection_type" is used to select specific fields to be obtained from the query. Possible values for "projection_type" are: {"course", "section", "professor", "course_code", "course_name", "course_description", "course_credits", "course_requisites", "course_prerequisites", "course_corequisites", "section_code", "section_modality", "meeting_start_time", "meeting_end_time", "meeting_days", "meeting_room", "professor_name"}.
+An example for "projection_type" may be "Find me all section data for..." then "projection_type"="section". If the text is "How many credits does CIIC3015 have?" then "projection_type"="course_credits", and so on. Default value for "projection_type" is "section".
+
+Extract the info from the given prompt: "{prompt}".
+
+Return a single JSON with the format {"course_code": str, "course_info" str, "min_credits": int, ..., "professor_name": str, "projection_type": str} where "..." represents the rest of the fields.
+*ALWAYS* populate *ALL* fields. If the prompt does not contain information for a specific data field, consider its value null.
+
+Always return only JSON formatted result.
